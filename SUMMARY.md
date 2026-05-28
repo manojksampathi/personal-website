@@ -116,9 +116,58 @@ VSCODE FILES/
 - `NEXTAUTH_SECRET` = (generated 32-byte base64)
 - `NEXTAUTH_URL` = `https://manojksampathi.com`
 
-#### Currently visible at manojksampathi.com
+#### Currently visible at manojksampathi.com (end of Session 1)
 - Default Next.js welcome page ("To get started, edit the page.tsx file")
 - Phase 2 will replace this with the actual landing page
+
+---
+
+### Session 2 — 2026-05-27 (Tuesday) — Phase 2 Site Shell
+
+**Outcome:** Real personal website now live at manojksampathi.com (replaces default Next.js page).
+
+#### Decisions made
+- **Design direction:** Modern Tech (Linear / Vercel vibe) — slate + emerald accent
+- **Display font:** Bricolage Grotesque (variable, distinctive) for headlines
+- **Body font:** Inter (clean, readable)
+- **Mono font:** JetBrains Mono
+- **Nav style:** Floating pill with backdrop blur + CAPS button-style links (HOME / ABOUT / ANALYTICS)
+- **Site positioning:** Passion project showcasing AI + analytics skills (NOT "open to opportunities")
+- **Git workflow going forward:** Feature branch → PR → preview deploy → merge (used proper workflow for mobile fixes commit)
+
+#### Files created
+- `components/nav/Header.tsx` — floating pill nav with logo + 3 CAPS links + CTA, mobile-responsive
+- `components/nav/Footer.tsx` — social links (GitHub, LinkedIn, Email) with inline SVG brand icons
+- `app/page.tsx` — landing page (hero with grid background, skills grid, featured project, focus areas)
+- `app/about/page.tsx` — about page with bio, skill breakdown, "why I built this" CTA
+- `app/analytics/page.tsx` — analytics hub with 3 domain cards + "how it's built" section
+- `app/analytics/retail/page.tsx` — "Under Construction" placeholder (will become dashboard in Phase 3)
+- `app/analytics/finance/page.tsx` — Coming Soon placeholder
+- `app/analytics/healthcare/page.tsx` — Coming Soon placeholder
+- `app/icon.tsx` — generates custom favicon (MS on emerald-teal gradient)
+
+#### Files modified
+- `app/layout.tsx` — wired Header + Footer; switched fonts to Inter + Bricolage Grotesque + JetBrains Mono
+- `app/globals.css` — added display font CSS var + applied to h1/h2/h3
+- `app/favicon.ico` — DELETED (replaced by `app/icon.tsx`)
+
+#### Git activity
+- Commit 1 (direct to main): `d130804` — initial Phase 2 site shell push
+- Commit 2 (via PR): `3202d50` — mobile responsive fixes + custom favicon (PR opened, reviewed via Vercel preview, merged, branch deleted — proper workflow)
+
+#### Lessons learned
+- Lucide-react v0.476+ deprecated brand icons (Github, Linkedin) for trademark reasons → use inline SVGs
+- Next.js 16 in use (per AGENTS.md note) — App Router conventions still work
+- Vercel preview deploys per branch are valuable for QA before merging to production
+- "Currently building with..." trust line needs flex-wrap on mobile or text gets cut off
+
+#### What's visible at manojksampathi.com (end of Session 2)
+- Full landing page with bold "Building AI-powered analytics products" headline
+- Floating pill nav (HOME / ABOUT / ANALYTICS / View Work)
+- Skills grid, featured project card, focus areas
+- Analytics hub at `/analytics` with 3 domain cards
+- About page, Coming Soon pages
+- Custom emerald-teal MS favicon
 
 ---
 
@@ -259,15 +308,35 @@ cat .env.local
 
 ---
 
-## Resume tomorrow
+## Resume tomorrow (Phase 3 — Retail Dashboard)
 
 When picking this up next session:
 
 1. Read this `SUMMARY.md` first (covers everything)
-2. Decision needed: **What design direction for the landing page?**
-   - Pick a vibe (minimal/professional vs colorful/creative)
-   - Pick a layout style
-   - Pick colors
-3. Then we start building Phase 2 (landing page + nav + analytics hub)
+2. Reply **"let's start Phase 3"** — we'll begin building the actual retail dashboard
 
-Or to just say "let's start Phase 2" — we'll pick design choices together.
+### What Phase 3 builds (Retail Dashboard)
+- **Branch:** `phase-3-retail-dashboard` (proper PR workflow)
+- **API route:** `app/api/retail/dashboard/route.ts` — queries BigQuery, returns JSON
+- **BigQuery client:** `lib/bigquery.ts` — singleton client using service account JSON env var
+- **Dashboard page:** `app/analytics/retail/page.tsx` (replaces placeholder)
+- **Components in `app/analytics/retail/_components/`:**
+  - `KpiCard.tsx` — Revenue, Orders, AOV, Return Rate (4 cards)
+  - `RevenueTrendChart.tsx` — line chart (last 12 months)
+  - `ChannelMixChart.tsx` — donut chart
+  - `RegionsChart.tsx` — bar chart
+  - `ProductsChart.tsx` — horizontal bar chart (top 10)
+  - `Filters.tsx` — date range picker + region/channel dropdowns
+
+### Data source
+- `retail-analytics-495420.dbt_dev_crest_sales_mart.fact_sales` (1.18M rows)
+- Join with `dim_customers`, `dim_products`, `dim_stores`, `dim_dates` as needed
+- All queries server-side via the API route (BigQuery key stays on server)
+
+### Phase 3 estimated time: 3-4 hours
+
+### Things to decide before/during Phase 3
+- Dashboard layout: sidebar filters + main content, or top filter bar?
+- KPI card style: minimal vs with sparklines?
+- Chart loading: server-rendered initial + client-side refetch on filter change?
+- Cache strategy: revalidate every X hours, or fresh on every request?
