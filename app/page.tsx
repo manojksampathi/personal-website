@@ -72,16 +72,16 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Trust line */}
-            <div className="mt-16 flex items-center gap-6 text-xs font-medium uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
-              <span>Currently building with</span>
-              <div className="flex items-center gap-4">
+            {/* Trust line - stacks on mobile, side-by-side on larger screens */}
+            <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-[10px] sm:text-xs font-medium uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 max-w-full px-4">
+              <span className="text-center">Currently building with</span>
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
                 <span>BigQuery</span>
-                <span className="text-slate-300">·</span>
+                <span className="text-slate-300 dark:text-slate-700">·</span>
                 <span>dbt</span>
-                <span className="text-slate-300">·</span>
+                <span className="text-slate-300 dark:text-slate-700">·</span>
                 <span>Claude</span>
-                <span className="text-slate-300">·</span>
+                <span className="text-slate-300 dark:text-slate-700">·</span>
                 <span>Next.js</span>
               </div>
             </div>
