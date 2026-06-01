@@ -128,7 +128,11 @@ export default async function RetailProjectPage() {
               />
               <SnippetStat
                 label="Avg Order"
-                value={kpis ? `$${kpis.avg_order_value.toLocaleString()}` : "—"}
+                value={
+                  kpis
+                    ? `$${Math.round(kpis.avg_order_value ?? 0).toLocaleString()}`
+                    : "—"
+                }
               />
               <SnippetStat
                 label="Return Rate"

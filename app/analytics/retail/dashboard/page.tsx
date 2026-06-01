@@ -24,6 +24,7 @@ import { ProductsChart } from "./_components/ProductsChart";
 import { Filters, type FilterValues } from "./_components/Filters";
 import {
   formatMoney,
+  formatMoneyFull,
   formatNumber,
   formatNumberFull,
   formatPct,
@@ -204,7 +205,7 @@ export default function DashboardPage() {
         />
         <KpiCard
           label="Avg Order Value"
-          value={data ? `$${data.kpis.avg_order_value.toFixed(0)}` : "—"}
+          value={data ? formatMoneyFull(Math.round(data.kpis.avg_order_value ?? 0)) : "—"}
           sub="per completed order"
           icon={<Receipt className="h-4 w-4" />}
           tone="amber"

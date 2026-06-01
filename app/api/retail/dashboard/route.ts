@@ -106,16 +106,17 @@ export async function GET(req: NextRequest) {
   try {
     const [kpis, monthly_revenue, channel_mix, regions, top_products] =
       await Promise.all([
-        // 1. KPIs — CAST NUMERICs to FLOAT64 so JSON returns proper JS numbers
+        // 1. KPIs — COALESCE handles empty results (NULL aggregates → 0)
+        // CAST NUMERICs to FLOAT64 so JSON returns proper JS numbers (not strings)
         query<KPIs>(
           `
           SELECT
-            CAST(ROUND(SUM(f.gross_revenue), 0) AS FLOAT64)                                       AS total_revenue,
-            COUNT(DISTINCT f.order_id)                                                            AS total_orders,
-            CAST(ROUND(SAFE_DIVIDE(SUM(f.gross_revenue), COUNT(DISTINCT f.order_id)), 2) AS FLOAT64) AS avg_order_value,
-            CAST(ROUND(100 * AVG(CAST(CAST(f.is_returned AS INT64) AS FLOAT64)), 2) AS FLOAT64)   AS return_rate_pct,
-            COUNT(DISTINCT f.customer_id)                                                         AS total_customers,
-            SUM(f.quantity)                                                                       AS total_units
+            COALESCE(CAST(ROUND(SUM(f.gross_revenue), 0) AS FLOAT64), 0)                                       AS total_revenue,
+            COUNT(DISTINCT f.order_id)                                                                         AS total_orders,
+            COALESCE(CAST(ROUND(SAFE_DIVIDE(SUM(f.gross_revenue), COUNT(DISTINCT f.order_id)), 2) AS FLOAT64), 0) AS avg_order_value,
+            COALESCE(CAST(ROUND(100 * AVG(CAST(CAST(f.is_returned AS INT64) AS FLOAT64)), 2) AS FLOAT64), 0)   AS return_rate_pct,
+            COUNT(DISTINCT f.customer_id)                                                                      AS total_customers,
+            COALESCE(SUM(f.quantity), 0)                                                                       AS total_units
           FROM ${TABLES.fact_sales} f
           LEFT JOIN ${TABLES.dim_stores} s USING (store_id)
           WHERE ${baseFilters} ${regionFilter}
