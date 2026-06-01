@@ -390,7 +390,56 @@ cat .env.local
 
 ---
 
-## Phase status (snapshot at end of Session 3)
+### Session 4 — 2026-06-01 (Monday) — Phase 5 (Credentials Auth)
+
+**Outcome:** AI chat is now gated behind invite-only credentials. Dashboard + rest of site stay public.
+
+#### Decision: credentials over Google OAuth
+- User chose simple username/password over Google sign-in: easier to hand specific creds to recruiters/friends, no OAuth setup, easy to add/remove users via env var
+- Still uses real NextAuth v5 session management (signed JWT cookies, CSRF, 30-day sessions)
+- 3 users created: demo, recruiter, friend (personalized names, no per-user logging)
+
+#### Files created
+- `auth.ts` — NextAuth v5 config, Credentials provider, bcrypt verification, JWT sessions, users loaded from `AUTH_USERS_B64` env var
+- `app/api/auth/[...nextauth]/route.ts` — `export const { GET, POST } = handlers`
+- `proxy.ts` — route protection (renamed from `middleware.ts` per Next.js 16 convention). Matches `/analytics/:domain/chat*` (pages → redirect to /signin) and `/api/:domain/chat*` (API → 401 JSON)
+- `app/signin/page.tsx` — invite-only sign-in form using a server action
+- `app/analytics/retail/chat/_components/ChatClient.tsx` — extracted the chat client from page.tsx; shows signed-in username badge + sign-out button
+- `app/analytics/retail/chat/page.tsx` — rewritten as a server-component wrapper: fetches session, passes username + signOut server action to ChatClient
+
+#### Bug fixed: Next.js $ env-var expansion
+- **Symptom:** every login failed with "Invalid credentials" even though hashes were correct
+- **Cause:** Next.js expands `$` in `.env` values as variable references. bcrypt hashes (`$2b$10$...`) got mangled into empty strings
+- **Fix:** base64-encode the whole user JSON → `AUTH_USERS_B64` (no `$` to expand) → decode in `auth.ts`. Kept `AUTH_USERS_JSON` as a legacy fallback in code
+
+#### Env vars added (local + Vercel)
+- `AUTH_SECRET` = same value as `NEXTAUTH_SECRET`
+- `AUTH_USERS_B64` = base64-encoded `[{name, bcrypt-hash}]` array
+
+#### Credentials (plaintext NOT stored anywhere — only bcrypt hashes)
+- demo / rXODmmeRGXE
+- recruiter / rMc3ZgfLdvQ
+- friend / Rr9d43W94rk
+- To add/rotate: `node -e "console.log(require('bcryptjs').hashSync('PASSWORD',10))"`, edit JSON, re-base64, update env var in Vercel + .env.local, redeploy
+
+#### Deps added
+- next-auth@beta (v5), bcryptjs, @types/bcryptjs
+
+#### Git
+- Branch `phase-5-credentials-auth`, 4 commits, PR #3 merged to main, branch deleted
+- Author config already fixed to Manoj Sampathi from Session 3 (local repo config)
+
+#### Production verification (end of Session 4)
+- Unauth `/analytics/retail/chat` → 307 redirect to `/signin?callbackUrl=...` ✓
+- Unauth `/api/retail/chat` → 401 `{"error":"Sign in required"}` ✓
+- `/signin` → 200 ✓
+- Live login (demo) → 302 success ✓
+- Chat WITH session cookie → 200 access granted ✓
+- Dashboard still public → 200 ✓
+
+---
+
+## Phase status (snapshot at end of Session 4)
 
 | Phase | What | Status |
 |---|---|---|
@@ -399,7 +448,7 @@ cat .env.local
 | Phase 2 — Site shell | Landing + nav + analytics hub + about + placeholders | ✅ Live |
 | Phase 3 — Retail Dashboard | Project landing + interactive BI dashboard | ✅ Live |
 | Phase 4 — AI Chat | Claude tool use, run_sql + render_chart, schema-aware | ✅ Live |
-| Phase 5 — Auth | NextAuth + Google gate on chat route | ⏸️ Paused (Anthropic credit cap protects cost) |
+| Phase 5 — Auth | Credentials auth (NOT Google) gating the chat, 3 invite users | ✅ Live |
 | Phase 6 — Polish + Launch | Real bio/photo, OG image, README, demo video | ⏭️ Next |
 | Phase 7+ — More domains | Finance, Healthcare following retail blueprint | Future |
 
