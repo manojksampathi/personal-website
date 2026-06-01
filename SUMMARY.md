@@ -171,6 +171,88 @@ VSCODE FILES/
 
 ---
 
+### Session 3 — 2026-05-31 (Sunday) — Phase 3 (Retail Dashboard) + Phase 4 (AI Chat)
+
+**Outcome:** End-to-end retail analytics product live at manojksampathi.com — interactive BI dashboard + AI chat agent both reading from BigQuery.
+
+#### Decisions made
+- **Retail page split into two routes:** `/analytics/retail` = project landing with KPI snippet + CTAs; `/analytics/retail/dashboard` = the heavy interactive dashboard (so visitors aren't hit with full data immediately)
+- **BI tool aesthetic for dashboard** (Power BI / Tableau feel): left accent stripes on KPI cards, defined card headers with icons, section labels, slate-50 canvas, dense layout
+- **Chat = independent from dashboard:** charts render INSIDE the chat thread (like ChatGPT), no bidirectional state sync with the dashboard
+- **Phase 5 (auth) paused:** Anthropic credit cap = no auto-recharge, so cost is naturally bounded. Will revisit before sharing widely
+- **Tool use over RAG:** for tabular data, Claude tool use (text-to-SQL) > RAG. RAG remains optional Phase 7 add (glossary)
+
+#### Phase 3 — Retail Dashboard files created
+- `lib/bigquery.ts` — server-side BQ client singleton (server-only)
+- `lib/format.ts` — money/number/pct/year-month formatters
+- `app/api/retail/dashboard/route.ts` — 5 parallel BQ queries (KPIs, monthly trend, channel mix, regions, top 10 products), `Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400`
+- `app/analytics/retail/dashboard/page.tsx` — client component with filter state, refetch on filter change
+- `app/analytics/retail/dashboard/_components/`:
+  - `KpiCard.tsx` — left accent stripe, icon header, big tabular-nums value (BI tool style)
+  - `RevenueTrendChart.tsx` — Recharts area + line
+  - `ChannelMixChart.tsx` — donut with legend
+  - `RegionsChart.tsx` — color-coded bar chart
+  - `ProductsChart.tsx` — custom horizontal ranked list with fill bars + category pills
+  - `Filters.tsx` — pill dropdowns (Period 12m/24m/36m/all · Region · Channel) with Reset button
+- `app/analytics/retail/page.tsx` rewritten — project landing snippet (hero + tech tags + live KPI snippet + 2 CTAs + how-it's-built section + explore cards). Server Component with `revalidate = 3600` so KPIs from BigQuery are server-rendered (not loaded client-side)
+
+#### Phase 4 — AI Chat files created
+- `lib/domains/retail.ts` — schema description + system prompt with: scope rules (only retail), commentary structure (headline + patterns + context), formatting rules (no throat-clearing, $-formatted), chart-vs-text decisions
+- `lib/tools/runSql.ts` — safety-checked SELECT/WITH executor:
+  - SELECT/WITH only (no DDL/DML)
+  - Forbidden keywords blocked: INSERT, UPDATE, DELETE, MERGE, DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE, EXECUTE, CALL
+  - Multi-statement (`;`) rejected
+  - Table allowlist (only the 5 mart tables)
+  - INFORMATION_SCHEMA blocked
+  - Forced `LIMIT 5000` if missing
+  - 15s timeout via Promise.race
+  - Sanitizes BigQuery NUMERIC strings → JS numbers
+- `app/api/retail/chat/route.ts` — streams Claude Sonnet 4.6 with `streamText`, `convertToModelMessages`, `stepCountIs(6)` for multi-step loops
+  - Tool: `run_sql` (server-executed) — calls `runSafeSql`
+  - Tool: `render_chart` (stub execute on server; chart is actually rendered client-side from the tool input) — stub returns `{rendered, type, title, row_count}` so Anthropic's tool-result requirement is satisfied
+- `app/analytics/retail/chat/page.tsx` — chat UI replacing placeholder:
+  - `useChat` from `@ai-sdk/react` with `DefaultChatTransport({ api: '/api/retail/chat' })`
+  - Suggested prompts on empty state
+  - Sticky header (breadcrumb + Dashboard button)
+  - Sticky composer at bottom (Enter to send, Shift+Enter newline, Stop button)
+  - Auto-scroll on new messages
+- `app/analytics/retail/chat/_components/`:
+  - `SqlBlock.tsx` — collapsed SQL inspector with state badges (running / success / failed)
+  - `ChatChart.tsx` — renders Claude's chart spec inline; supports bar / line / pie / table
+
+#### Bugs found + fixed during Session 3
+1. **NUMERICs returned as JSON strings** — fixed by wrapping aggregations in `CAST(... AS FLOAT64)` so JSON serializes as numbers, not BigQuery decimal strings
+2. **TypeError `Cannot read properties of null (reading 'toFixed')`** — fixed by wrapping BQ aggregates in `COALESCE(..., 0)` so empty filter ranges return zeros; also added `?? 0` guards before `.toFixed`/`.toLocaleString`
+3. **Recharts v3 tooltip formatter type errors** — switched from `(value: number)` to `(value)` + `Number(value)` casts
+4. **Chat error: "Tool result is missing for tool call toolu_XXX"** — render_chart had no `execute` on server, so the tool call was never closed. Anthropic's API requires a tool result before continuing. Added a stub `execute` returning `{rendered: true, ...}` — chart still renders client-side from the tool input
+5. **Filter overflow on mobile** (already fixed in Session 2 mobile pass) carried over fine
+
+#### Deps added in Session 3
+- `@ai-sdk/react` (v6 split useChat into separate package)
+- `zod` (for tool schemas)
+- `next-auth` was briefly installed for Phase 5 then uninstalled (Phase 5 paused)
+
+#### Git activity
+- Branch: `phase-3-retail-dashboard` (intentionally kept one branch for both phases)
+- 5 commits ending at `29974b1` (PR #2)
+- **Author attribution fix:** global git config was set to "Shravani <shravani96ai@gmail.com>" — set local repo config to "Manoj Sampathi <manoj91ai@gmail.com>", then `git rebase main --exec "git commit --amend --reset-author --no-edit"` to rewrite all 5 commits + force-push. PR refreshed cleanly.
+- PR #2 merged to main → Vercel auto-deployed
+- Branch deleted locally and on remote
+
+#### Production verification (end of Session 3)
+- `/` `/analytics` `/analytics/retail` `/analytics/retail/dashboard` `/analytics/retail/chat` → all HTTP 200
+- `/api/retail/dashboard` → returns $52.6M revenue, 259K orders, 19 monthly buckets ✓
+- `/api/retail/chat` → Claude responds with system-prompt persona, streams correctly ✓
+- Off-topic refusal tested: Python coding question, generic trivia, jailbreak attempt — all refused and redirected to retail ✓
+
+#### What's visible at manojksampathi.com (end of Session 3)
+- Everything from Sessions 1+2 PLUS:
+- `/analytics/retail` — real project landing with live BigQuery KPI snippet (Revenue / Orders / AOV / Return Rate)
+- `/analytics/retail/dashboard` — full interactive BI dashboard with filters
+- `/analytics/retail/chat` — AI chat agent (Claude Sonnet 4.6 + tool use + Recharts inline)
+
+---
+
 ## Next Phase
 
 ### Phase 2 — Site Shell (estimated 2-3 hours)
@@ -308,35 +390,50 @@ cat .env.local
 
 ---
 
-## Resume tomorrow (Phase 3 — Retail Dashboard)
+## Phase status (snapshot at end of Session 3)
 
-When picking this up next session:
+| Phase | What | Status |
+|---|---|---|
+| Data layer (BigQuery + dbt) | 11 raw tables → 5 staging → star schema (4 dim + fact_sales, 1.18M rows) | ✅ Live |
+| Phase 1 — Foundation | Next.js + GitHub + Vercel + custom domain + SSL | ✅ Live |
+| Phase 2 — Site shell | Landing + nav + analytics hub + about + placeholders | ✅ Live |
+| Phase 3 — Retail Dashboard | Project landing + interactive BI dashboard | ✅ Live |
+| Phase 4 — AI Chat | Claude tool use, run_sql + render_chart, schema-aware | ✅ Live |
+| Phase 5 — Auth | NextAuth + Google gate on chat route | ⏸️ Paused (Anthropic credit cap protects cost) |
+| Phase 6 — Polish + Launch | Real bio/photo, OG image, README, demo video | ⏭️ Next |
+| Phase 7+ — More domains | Finance, Healthcare following retail blueprint | Future |
 
-1. Read this `SUMMARY.md` first (covers everything)
-2. Reply **"let's start Phase 3"** — we'll begin building the actual retail dashboard
+---
 
-### What Phase 3 builds (Retail Dashboard)
-- **Branch:** `phase-3-retail-dashboard` (proper PR workflow)
-- **API route:** `app/api/retail/dashboard/route.ts` — queries BigQuery, returns JSON
-- **BigQuery client:** `lib/bigquery.ts` — singleton client using service account JSON env var
-- **Dashboard page:** `app/analytics/retail/page.tsx` (replaces placeholder)
-- **Components in `app/analytics/retail/_components/`:**
-  - `KpiCard.tsx` — Revenue, Orders, AOV, Return Rate (4 cards)
-  - `RevenueTrendChart.tsx` — line chart (last 12 months)
-  - `ChannelMixChart.tsx` — donut chart
-  - `RegionsChart.tsx` — bar chart
-  - `ProductsChart.tsx` — horizontal bar chart (top 10)
-  - `Filters.tsx` — date range picker + region/channel dropdowns
+## Resume next session
 
-### Data source
-- `retail-analytics-495420.dbt_dev_crest_sales_mart.fact_sales` (1.18M rows)
-- Join with `dim_customers`, `dim_products`, `dim_stores`, `dim_dates` as needed
-- All queries server-side via the API route (BigQuery key stays on server)
+When picking this up:
 
-### Phase 3 estimated time: 3-4 hours
+1. Read this `SUMMARY.md` first (covers everything end-to-end)
+2. Pick a track:
+   - **"Polish for sharing"** → Phase 6 tasks (bio/photo, OG image, README, demo video)
+   - **"Add auth"** → Resume Phase 5 (NextAuth + Google, gate `/analytics/*/chat`)
+   - **"Add a domain"** → Phase 7 (finance or healthcare, copy retail pattern)
+   - **"Strengthen the chat"** → optional RAG glossary layer (2hr, interview talking point)
+   - **"Fix dashboard data window"** → regenerate synthetic data through 2026 so "Last 12 months" filter has data
 
-### Things to decide before/during Phase 3
-- Dashboard layout: sidebar filters + main content, or top filter bar?
-- KPI card style: minimal vs with sparklines?
-- Chart loading: server-rendered initial + client-side refetch on filter change?
-- Cache strategy: revalidate every X hours, or fresh on every request?
+### Phase 6 detail (most likely next)
+1. **Real `/about` content** (~30 min) — replace placeholder bio in `app/about/page.tsx`, add real headshot (or use the MS gradient as a stylized avatar)
+2. **OG image** (~30 min) — 1200×630 PNG for LinkedIn/Twitter share previews. Could generate dynamically via Next.js OG image API (`/app/opengraph-image.tsx`)
+3. **README.md on GitHub** (~1 hr) — architecture diagram, screenshots, demo gif, tech stack, "Why I built this"
+4. **Demo video (Loom)** (~30 min) — 2-3 min walkthrough: landing → analytics hub → dashboard → chat → ask a question, watch chart appear
+
+### Phase 5 detail (when ready to re-enable)
+- Install `next-auth@beta` (was tried + uninstalled in Session 3)
+- Create `auth.ts` at root with Google provider
+- Add `middleware.ts` matching `/analytics/:domain*/chat/:path*`
+- Sign-in page at `app/(auth)/signin/page.tsx`
+- Set up Google OAuth client at console.cloud.google.com (need redirect URIs for localhost + manojksampathi.com)
+- Add `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` env vars in `.env.local` and Vercel
+- Rename `NEXTAUTH_SECRET` → `AUTH_SECRET` (or keep both for v5 backwards compat)
+
+### Notes / backlog
+- Global git config on this Mac is "Shravani" — set local config to "Manoj Sampathi" in this repo. If creating new repos here, remember to set local config OR change global config.
+- Synthetic data ends Dec 2024 — Last 12 months filter (May 2025–today) returns zeros (handled gracefully with COALESCE)
+- Rate limiting not implemented on chat (Phase 5 auth + Anthropic credit cap = enough protection for now)
+- AGENTS.md note in repo flags that Next.js 16 has breaking changes vs training data — keep an eye out for API drift
