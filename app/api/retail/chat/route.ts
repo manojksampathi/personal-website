@@ -89,9 +89,16 @@ export async function POST(req: Request) {
             .optional()
             .describe("Format hint for the y-axis values."),
         }),
-        // No execute() — this is a "client-side rendered" tool. The model emits the
-        // call, server stops; the frontend reads the tool call from the message
-        // stream and renders the chart from the input.
+        // Stub execute — the chart is actually rendered on the client by reading
+        // the tool input from the message parts. But Anthropic's API requires
+        // every tool call to have a tool result before the conversation can
+        // continue, so we return a small ack here.
+        execute: async ({ type, title, data }) => ({
+          rendered: true,
+          type,
+          title,
+          row_count: data.length,
+        }),
       }),
     },
 
