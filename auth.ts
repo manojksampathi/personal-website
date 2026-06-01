@@ -13,19 +13,31 @@ type StoredUser = { name: string; hash: string };
 
 function loadUsers(): StoredUser[] {
   try {
-    const raw = process.env.AUTH_USERS_JSON;
-    if (!raw) {
-      console.warn("[auth] AUTH_USERS_JSON not set — no users can sign in");
+    // AUTH_USERS_B64 is base64-encoded JSON. We base64-encode to avoid Next.js
+    // expanding the `$` characters in bcrypt hashes ($2b$10$...) as env var refs.
+    const b64 = process.env.AUTH_USERS_B64;
+    const rawJson = process.env.AUTH_USERS_JSON; // legacy fallback
+
+    let json: string | undefined;
+    if (b64) {
+      json = Buffer.from(b64, "base64").toString("utf8");
+    } else if (rawJson) {
+      json = rawJson;
+    }
+
+    if (!json) {
+      console.warn("[auth] AUTH_USERS_B64 not set — no users can sign in");
       return [];
     }
-    const parsed = JSON.parse(raw);
+
+    const parsed = JSON.parse(json);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
       (u): u is StoredUser =>
         typeof u?.name === "string" && typeof u?.hash === "string"
     );
   } catch (e) {
-    console.error("[auth] Failed to parse AUTH_USERS_JSON:", e);
+    console.error("[auth] Failed to parse user list:", e);
     return [];
   }
 }
