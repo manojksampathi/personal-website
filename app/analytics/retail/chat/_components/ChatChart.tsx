@@ -227,39 +227,73 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
     );
   }
 
-  // bar (default)
+  // bar (default) — use horizontal layout when labels are long (e.g. product names)
+  const maxLabelLen = Math.max(
+    ...spec.data.map((r) => String(r[spec.x_key] ?? "").length)
+  );
+  const isHorizontal = maxLabelLen > 12;
+  const labelWidth = Math.min(Math.max(maxLabelLen * 6, 80), 160);
+
   return (
     <ChartShell title={spec.title}>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={spec.data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis
-              dataKey={spec.x_key}
-              stroke="#94a3b8"
-              tick={{ fontSize: 11 }}
-              interval={0}
-            />
-            <YAxis
-              stroke="#94a3b8"
-              tick={{ fontSize: 11 }}
-              tickFormatter={(v) => formatValue(v, spec.y_format)}
-              width={55}
-            />
-            <Tooltip
-              contentStyle={{
-                borderRadius: 8,
-                border: "1px solid #e2e8f0",
-                fontSize: 12,
-              }}
-              formatter={(value) => [formatValueFull(Number(value), spec.y_format), spec.y_key.replace(/_/g, " ")]}
-            />
-            <Bar dataKey={spec.y_key} radius={[6, 6, 0, 0]}>
-              {spec.data.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Bar>
-          </BarChart>
+          {isHorizontal ? (
+            <BarChart
+              layout="vertical"
+              data={spec.data}
+              margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+              <XAxis
+                type="number"
+                stroke="#94a3b8"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v) => formatValue(v, spec.y_format)}
+              />
+              <YAxis
+                type="category"
+                dataKey={spec.x_key}
+                stroke="#94a3b8"
+                tick={{ fontSize: 11 }}
+                width={labelWidth}
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
+                formatter={(value) => [formatValueFull(Number(value), spec.y_format), spec.y_key.replace(/_/g, " ")]}
+              />
+              <Bar dataKey={spec.y_key} radius={[0, 6, 6, 0]}>
+                {spec.data.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          ) : (
+            <BarChart data={spec.data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <XAxis
+                dataKey={spec.x_key}
+                stroke="#94a3b8"
+                tick={{ fontSize: 11 }}
+                interval={0}
+              />
+              <YAxis
+                stroke="#94a3b8"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v) => formatValue(v, spec.y_format)}
+                width={55}
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
+                formatter={(value) => [formatValueFull(Number(value), spec.y_format), spec.y_key.replace(/_/g, " ")]}
+              />
+              <Bar dataKey={spec.y_key} radius={[6, 6, 0, 0]}>
+                {spec.data.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          )}
         </ResponsiveContainer>
       </div>
     </ChartShell>
