@@ -85,7 +85,7 @@ export default async function SignInPage({
               autoComplete="username"
               autoFocus
               className="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-emerald-600 dark:focus:ring-emerald-900/40"
-              placeholder="recruiter"
+              placeholder="Enter username"
             />
           </div>
 
