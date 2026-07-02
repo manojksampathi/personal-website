@@ -30,6 +30,10 @@ export const metadata: Metadata = {
   title: "Manoj Sampathi — Data Analyst & AI Engineer",
   description:
     "Personal portfolio showcasing analytics work across retail, finance, and healthcare. Built with Next.js, BigQuery, and Claude AI.",
+  robots: {
+    index: false,
+    follow: false,
+  },
   openGraph: {
     title: "Manoj Sampathi — Data Analyst & AI Engineer",
     description:

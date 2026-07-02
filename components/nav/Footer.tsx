@@ -17,12 +17,12 @@ export function Footer() {
               label="GitHub"
             />
             <SocialLink
-              href="https://linkedin.com/in/manojksampathi"
+              href="https://www.linkedin.com/in/mksampathi/"
               icon={<LinkedinIcon />}
               label="LinkedIn"
             />
             <SocialLink
-              href="mailto:manoj91ai@gmail.com"
+              href="mailto:manojkumarsampathi@gmail.com"
               icon={<Mail className="h-4 w-4" />}
               label="Email"
             />
